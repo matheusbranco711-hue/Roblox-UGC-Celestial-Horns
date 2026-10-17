@@ -2,7 +2,7 @@
 
 Modelo 3D real de **dois chifres de ametista com fitas helicoidais douradas**, duas estrelas de cinco pontas no topo, seis estrelas decorativas e quatro estrelas pendentes em correntes. Não inclui uma segunda faixa nem fogos artificiais novos: foi desenhado para ser equipado junto à tiara original.
 
-[Baixar o projeto completo em ZIP](https://github.com/matheusbranco711-hue/Roblox-UGC-Celestial-Horns/archive/refs/heads/main.zip)
+[Baixar o projeto completo em ZIP](https://github.com/matheusbranco711-hue/Roblox-UGC-Celestial-Horns/archive/refs/heads/codex%2Fcelestial-horns-addon.zip)
 
 ![Vistas do modelo realmente renderizado no Blender](Renders/00_Presentation.jpg)
 
