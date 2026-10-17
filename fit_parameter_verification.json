@@ -1,0 +1,72 @@
+{
+  "passed": true,
+  "parameters_exercised": {
+    "LEFT_STAR_TARGET": [
+      -1.02,
+      0.08,
+      1.41
+    ],
+    "RIGHT_STAR_TARGET": [
+      0.96,
+      -0.04,
+      1.52
+    ],
+    "LEFT_HORN_ROTATION": [
+      3,
+      5,
+      -4
+    ],
+    "RIGHT_HORN_ROTATION": [
+      -2,
+      -4,
+      7
+    ],
+    "LEFT_HORN_SCALE": [
+      1.08,
+      0.95,
+      0.93
+    ],
+    "RIGHT_HORN_SCALE": [
+      0.94,
+      1.04,
+      1.05
+    ],
+    "LEFT_STAR_ROTATION": [
+      8,
+      16,
+      12
+    ],
+    "RIGHT_STAR_ROTATION": [
+      -7,
+      11,
+      -6
+    ],
+    "LEFT_STAR_SCALE": [
+      1.1,
+      0.9,
+      1.04
+    ],
+    "RIGHT_STAR_SCALE": [
+      0.95,
+      1.1,
+      0.92
+    ]
+  },
+  "errors_model_units": {
+    "LEFT": {
+      "actual_star_center_error": 1.1944189326376765e-07,
+      "actual_horn_tip_error": 7.450580596923828e-09,
+      "base_preservation_error": 0.0
+    },
+    "RIGHT": {
+      "actual_star_center_error": 5.972094663188382e-08,
+      "actual_horn_tip_error": 0.0,
+      "base_preservation_error": 0.0
+    }
+  },
+  "preserves_reference_objects": true,
+  "cleans_generated_objects_for_rebuild": true,
+  "triangles": 3800,
+  "non_manifold_edges": 0,
+  "original_accessory_alignment_in_studio_validated": false
+}

@@ -1,0 +1,53 @@
+{
+  "blender": "4.3.2",
+  "formats": {
+    "blend": {
+      "mesh_objects": 1,
+      "triangles": 3800,
+      "materials": 1,
+      "uv_sets": 1,
+      "non_manifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.24864765280646461,
+      "dimensions_world_blender_units": [
+        2.170912027359009,
+        0.6008372604846954,
+        1.7156569957733154
+      ],
+      "front_mirror_max_error": 0.0
+    },
+    "fbx": {
+      "mesh_objects": 1,
+      "triangles": 3800,
+      "materials": 1,
+      "uv_sets": 1,
+      "non_manifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.24864765280646461,
+      "dimensions_world_blender_units": [
+        2.170912027359009,
+        0.6008372902870178,
+        1.7156569957733154
+      ],
+      "roundtrip_vertex_max_error": 2.517124642054114e-07
+    },
+    "obj": {
+      "mesh_objects": 1,
+      "triangles": 3800,
+      "materials": 1,
+      "uv_sets": 1,
+      "non_manifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.250498689554063,
+      "dimensions_world_blender_units": [
+        2.170912027359009,
+        0.600836992263794,
+        1.7156569510698318
+      ],
+      "roundtrip_vertex_max_error": 8.582267696510826e-07
+    }
+  },
+  "roblox_studio_tested": false,
+  "render_files_present": 4,
+  "passed": true
+}

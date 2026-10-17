@@ -1,0 +1,84 @@
+{
+  "HORN_HEIGHT": 1.48,
+  "HORN_SPACING": 1.32,
+  "HORN_CURVATURE": 0.24,
+  "SPIRAL_TURNS": 3.2,
+  "STAR_SCALE": 0.195,
+  "HEAD_POSITION_OFFSET": [
+    0,
+    0,
+    0
+  ],
+  "LEFT_TIP_OFFSET": [
+    0,
+    0,
+    0
+  ],
+  "RIGHT_TIP_OFFSET": [
+    0,
+    0,
+    0
+  ],
+  "LEFT_POSITION_OFFSET": [
+    0,
+    0,
+    0
+  ],
+  "RIGHT_POSITION_OFFSET": [
+    0,
+    0,
+    0
+  ],
+  "LEFT_HORN_ROTATION": [
+    0,
+    0,
+    0
+  ],
+  "RIGHT_HORN_ROTATION": [
+    0,
+    0,
+    0
+  ],
+  "LEFT_HORN_SCALE": [
+    1,
+    1,
+    1
+  ],
+  "RIGHT_HORN_SCALE": [
+    1,
+    1,
+    1
+  ],
+  "LEFT_STAR_ROTATION": [
+    0,
+    0,
+    0
+  ],
+  "RIGHT_STAR_ROTATION": [
+    0,
+    0,
+    0
+  ],
+  "LEFT_STAR_SCALE": [
+    1,
+    1,
+    1
+  ],
+  "RIGHT_STAR_SCALE": [
+    1,
+    1,
+    1
+  ],
+  "LEFT_STAR_OFFSET": [
+    0,
+    0,
+    0
+  ],
+  "RIGHT_STAR_OFFSET": [
+    0,
+    0,
+    0
+  ],
+  "LEFT_STAR_TARGET": null,
+  "RIGHT_STAR_TARGET": null
+}

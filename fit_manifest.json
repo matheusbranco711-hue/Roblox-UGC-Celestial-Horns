@@ -1,0 +1,63 @@
+{
+  "original_asset_id": 81550816889926,
+  "body_scale": "Classic",
+  "accessory_type": "Hat",
+  "attachment": "HatAttachment",
+  "attachment_relative_origin_blender": [
+    0,
+    0,
+    0
+  ],
+  "export_axis_mapping": "Roblox (X,Y,Z) = Blender (X,Z,-Y)",
+  "fit_validated_in_studio": false,
+  "stars": {
+    "LEFT": {
+      "target_blender": [
+        -0.9000000357627869,
+        -3.0274934496532696e-19,
+        1.350000023841858
+      ],
+      "star_center_blender": [
+        -0.9000000357627869,
+        -3.0274934496532696e-19,
+        1.350000023841858
+      ],
+      "star_center_roblox": [
+        -0.9000000357627869,
+        1.350000023841858,
+        3.0274934496532696e-19
+      ],
+      "source": "image estimate; not measured",
+      "center_target_error_model_units": 0.0
+    },
+    "RIGHT": {
+      "target_blender": [
+        0.9000000357627869,
+        -3.0274934496532696e-19,
+        1.350000023841858
+      ],
+      "star_center_blender": [
+        0.9000000357627869,
+        -3.0274934496532696e-19,
+        1.350000023841858
+      ],
+      "star_center_roblox": [
+        0.9000000357627869,
+        1.350000023841858,
+        3.0274934496532696e-19
+      ],
+      "source": "image estimate; not measured",
+      "center_target_error_model_units": 0.0
+    }
+  },
+  "target_size_studs": [
+    2.170912027359009,
+    1.7156569957733154,
+    0.6008372604846954
+  ],
+  "handle_geometry_center_roblox": [
+    0.0,
+    0.6871715784072876,
+    -0.04645521938800812
+  ]
+}

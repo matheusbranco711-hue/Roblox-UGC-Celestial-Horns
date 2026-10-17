@@ -1,0 +1,49 @@
+{
+  "vertices": 1932,
+  "polygons": 2056,
+  "triangles": 3800,
+  "triangle_budget": 4000,
+  "triangle_budget_pass": true,
+  "non_manifold_edges": 0,
+  "loose_vertices": 0,
+  "zero_area_faces": 0,
+  "closed_surface_components": 34,
+  "signed_volume": 0.24864765280646461,
+  "single_mesh": true,
+  "material_slots": 1,
+  "uv_sets": 1,
+  "uv_in_0_1": true,
+  "bounds_blender": {
+    "min": [
+      -1.0854560136795044,
+      -0.2539634108543396,
+      -0.17065691947937012
+    ],
+    "max": [
+      1.0854560136795044,
+      0.34687384963035583,
+      1.5450000762939453
+    ]
+  },
+  "bounds_roblox": {
+    "min": [
+      -1.0854560136795044,
+      -0.17065691947937012,
+      -0.34687384963035583
+    ],
+    "max": [
+      1.0854560136795044,
+      1.5450000762939453,
+      0.2539634108543396
+    ]
+  },
+  "target_size_studs": [
+    2.170912027359009,
+    1.7156569957733154,
+    0.6008372604846954
+  ],
+  "classic_hat_centered_bounds_pass": true,
+  "normal_hat_centered_bounds_pass": false,
+  "alignment_in_roblox_studio_validated": false,
+  "ugc_publication_validated": false
+}
