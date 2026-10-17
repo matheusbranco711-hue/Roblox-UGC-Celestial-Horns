@@ -1,0 +1,14 @@
+{
+  "editable_object": "Celestial_Horns_EDITABLE",
+  "material_slots": 3,
+  "face_counts": {
+    "Celestial_Amethyst_Enamel": 792,
+    "Celestial_Polished_Gold": 1176,
+    "Celestial_Luminous_Stars": 160
+  },
+  "export_object": "Celestial_Horns_Handle",
+  "export_material_slots": 1,
+  "same_geometry_as_export": true,
+  "viewport_default": "Material Preview",
+  "all_three_materials_used": true
+}

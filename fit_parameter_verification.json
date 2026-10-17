@@ -54,19 +54,19 @@
   },
   "errors_model_units": {
     "LEFT": {
-      "actual_star_center_error": 1.1944189326376765e-07,
+      "actual_star_center_error": 7.450580596923828e-09,
       "actual_horn_tip_error": 7.450580596923828e-09,
       "base_preservation_error": 0.0
     },
     "RIGHT": {
-      "actual_star_center_error": 5.972094663188382e-08,
+      "actual_star_center_error": 1.3333208984265686e-07,
       "actual_horn_tip_error": 0.0,
       "base_preservation_error": 0.0
     }
   },
   "preserves_reference_objects": true,
   "cleans_generated_objects_for_rebuild": true,
-  "triangles": 3800,
+  "triangles": 3992,
   "non_manifold_edges": 0,
   "original_accessory_alignment_in_studio_validated": false
 }

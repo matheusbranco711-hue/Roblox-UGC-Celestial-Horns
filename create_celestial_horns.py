@@ -16,14 +16,20 @@ import bpy
 import bmesh
 import numpy as np
 from mathutils import Vector, Matrix, Euler
+from mathutils.bvhtree import BVHTree
 
 # -------------------- ART / FIT PARAMETERS (target studs) --------------------
 HORN_HEIGHT = 1.48
 HORN_SPACING = 1.32
 HORN_CURVATURE = 0.24
-SPIRAL_TURNS = 3.2
-STAR_SCALE = 0.195
-BASE_RADIUS = 0.248
+SPIRAL_TURNS = 2.65
+SPIRAL_PHASE = -3.55
+HORN_SWEEP = 0.13
+SPIRAL_SWAY = 0.055
+BODY_FLUTE = 0.24
+RIBBON_WIDTH = 0.175
+STAR_SCALE = 0.18
+BASE_RADIUS = 0.29
 BASE_Z = -0.13
 HEAD_POSITION_OFFSET = (0.0, 0.0, 0.0)
 LEFT_TIP_OFFSET = (0.0, 0.0, 0.0)
@@ -47,9 +53,9 @@ LEFT_STAR_TARGET = None
 RIGHT_STAR_TARGET = None
 # 0..1: where deformation toward the tip target starts along each horn.
 TIP_WARP_START = 0.0
-RADIAL_SEGMENTS = 16
-HORN_SEGMENTS = 26
-RIBBON_SEGMENTS = 60
+RADIAL_SEGMENTS = 12
+HORN_SEGMENTS = 34
+RIBBON_SEGMENTS = 56
 ALBEDO_SIZE = 1024
 PBR_SIZE = 256
 MAX_TRIANGLES = 4000  # verified creator-docs avatar/rigid-accessories/specifications
@@ -68,6 +74,7 @@ def arguments():
     p.add_argument('--output', default=str(Path(__file__).resolve().parent))
     p.add_argument('--config', help='Optional JSON overrides, e.g. fit_parameters.json')
     p.add_argument('--no-render', action='store_true')
+    p.add_argument('--views', nargs='+', choices=['front','back','side','three_quarter'], default=['front','back','side','three_quarter'])
     p.add_argument('--render-size', type=int, default=RENDER_SIZE)
     p.add_argument('--samples', type=int, default=RENDER_SAMPLES)
     a = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -92,7 +99,7 @@ def apply_config(path):
 
 def clean_scene():
     # Preserve any imported original/reference objects outside our collections.
-    managed={'01_EXPORT_Addon','02_FIT_Guides_NOT_EXPORTED','03_PRESENTATION_NOT_EXPORTED'}
+    managed={'01_EXPORT_Addon','02_FIT_Guides_NOT_EXPORTED','03_PRESENTATION_NOT_EXPORTED','00_EDITABLE_Three_Materials'}
     for col in list(bpy.data.collections):
         if col.name in managed:
             for obj in list(col.all_objects):
@@ -153,8 +160,8 @@ def atlas_pixels(n):
     y, x = np.mgrid[0:n, 0:n].astype(np.float32)/(n-1)
     rgba = np.ones((n, n, 4), dtype=np.float32)
     rgba[..., :3] = (0.08, 0.016, 0.14)
-    metal = np.full((n,n), 0.52, dtype=np.float32)
-    rough = np.full((n,n), 0.255, dtype=np.float32)
+    metal = np.full((n,n), 0.48, dtype=np.float32)
+    rough = np.full((n,n), 0.23, dtype=np.float32)
     emiss = np.zeros((n,n), dtype=np.float32)
     # Extend each patch into a guard band for mipmap filtering.
     purple = x < .5
@@ -180,7 +187,7 @@ def atlas_pixels(n):
     for c, base in enumerate((.93,.57,.16)):
         rgba[...,c][gold] = (base + (1-edge)*(.055,.09,.045)[c])[gold]
     metal[gold] = .92
-    rough[gold] = .225
+    rough[gold] = .195
     stars = x >= .76
     su, sv = (x-.875)/.09, (y-.5)/.44
     radial = np.clip(np.sqrt(su*su+sv*sv),0,1)
@@ -217,12 +224,12 @@ def make_material(ims):
     # amethyst enamel and faceted stars without extra Roblox material slots.
     mat = bpy.data.materials.new('Celestial_PBR_Atlas')
     mat.use_nodes = True
-    mat.diffuse_color = (.25,.025,.45,1)
+    mat.diffuse_color = (.8,.8,.8,1)
     nodes, links = mat.node_tree.nodes, mat.node_tree.links
     nodes.clear()
     out = nodes.new('ShaderNodeOutputMaterial'); out.location=(630,160)
     bs = nodes.new('ShaderNodeBsdfPrincipled'); bs.location=(300,160)
-    bs.inputs['Coat Weight'].default_value=.24
+    bs.inputs['Coat Weight'].default_value=.32
     bs.inputs['Coat Roughness'].default_value=.19
     links.new(bs.outputs['BSDF'],out.inputs['Surface'])
     for key, slot, y in [('color','Base Color',450),('metal','Metallic',180),
@@ -230,7 +237,7 @@ def make_material(ims):
         n=nodes.new('ShaderNodeTexImage'); n.image=ims[key]; n.location=(-400,y)
         n.label='Roblox '+key; n.interpolation='Linear'
         if key=='emiss':
-            mul=nodes.new('ShaderNodeMath'); mul.operation='MULTIPLY'; mul.inputs[1].default_value=1.7
+            mul=nodes.new('ShaderNodeMath'); mul.operation='MULTIPLY'; mul.inputs[1].default_value=1.4
             mul.location=(-100,-300)
             links.new(n.outputs['Color'],mul.inputs[0]); links.new(mul.outputs[0],bs.inputs[slot])
         else:
@@ -244,7 +251,7 @@ def make_material(ims):
 
 class MeshBuilder:
     def __init__(self):
-        self.verts=[]; self.faces=[]; self.uvs=[]; self.smooth=[]; self.groups={}
+        self.verts=[]; self.faces=[]; self.uvs=[]; self.smooth=[]; self.groups={}; self.vertex_normals={}
     def part(self, name, vertices, faces, uvs, smooth=False):
         start=len(self.verts)
         self.verts.extend(tuple(v) for v in vertices)
@@ -262,29 +269,88 @@ class MeshBuilder:
             for li, xy in zip(poly.loop_indices,coords): layer.data[li].uv=xy
         bm=bmesh.new(); bm.from_mesh(me)
         bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces)); bm.to_mesh(me); bm.free(); me.update()
+        if self.vertex_normals:
+            custom=[n.vector.copy() for n in me.corner_normals]
+            for poly in me.polygons:
+                known=[i in self.vertex_normals for i in poly.vertices]
+                for li in poly.loop_indices:
+                    vi=me.loops[li].vertex_index
+                    if all(known): custom[li]=self.vertex_normals[vi]
+                    elif any(known): custom[li]=poly.normal.copy()
+            me.normals_split_custom_set(custom)
         for label,ids in self.groups.items():
             g=obj.vertex_groups.new(name=label); g.add(ids,1.0,'REPLACE')
         return obj
 
 
+def smoothstep(x):
+    x=max(0.0,min(1.0,x))
+    return x*x*(3-2*x)
+
+
+def spiral_phase(t):
+    return SPIRAL_PHASE+2*math.pi*SPIRAL_TURNS*t
+
+
 def center(t):
-    # Smooth rising silhouette with a subtle corkscrew displacement.
-    return Vector((HORN_CURVATURE*t + .010*math.sin(2*math.pi*SPIRAL_TURNS*t)*math.sin(math.pi*t),
-                   .008*math.sin(math.pi*t)*math.cos(2*math.pi*SPIRAL_TURNS*t),
-                   HORN_HEIGHT*t))
+    # S-shaped sweep + an actual broad corkscrew in the purple volume.
+    # Parallel rings keep the loft closed even with a strong silhouette.
+    t=max(0.0,min(1.0,t))
+    e=max(0.0,math.sin(math.pi*t))**1.15
+    ph=spiral_phase(t)
+    return Vector((HORN_CURVATURE*t + HORN_SWEEP*math.sin(math.pi*t)**2
+                   + SPIRAL_SWAY*e*math.cos(ph),
+                   SPIRAL_SWAY*.60*e*math.sin(ph), HORN_HEIGHT*t))
 
 
 def frame(t):
-    eps=.0001
-    tangent=(center(min(1,t+eps))-center(max(0,t-eps))).normalized()
-    a=Vector((1,0,0)); a=(a-tangent*a.dot(tangent)).normalized()
-    b=tangent.cross(a).normalized()
-    return a,b,tangent
+    return Vector((1,0,0)),Vector((0,1,0)),Vector((0,0,1))
 
 
-def radius(t,theta):
-    taper=.006 + BASE_RADIUS*((1-t)**.78)
-    return taper*(1 + .018*math.sin(2*(theta-2*math.pi*SPIRAL_TURNS*t)))
+def envelope(t):
+    t=max(0.0,min(1.0,t))
+    # A rounded, narrow foot opens into the sculpted first whorl.
+    foot=.40+.60*smoothstep(t/.16)
+    return (.0045+BASE_RADIUS*(1-t)**.76)*foot
+
+
+def surface(t,phi):
+    t=max(0.0,min(1.0,t)); r=envelope(t); ph=spiral_phase(t)
+    # Twisted asymmetric teardrop section. The purple body itself coils;
+    # the gold follows its crest rather than decorating a round cone.
+    a=1.0+BODY_FLUTE
+    b=1.0-BODY_FLUTE*.58
+    x=r*(a*math.cos(phi)+.10*math.cos(2*phi))
+    y=r*b*math.sin(phi)
+    return center(t)+Vector((x*math.cos(ph)-y*math.sin(ph),
+                            x*math.sin(ph)+y*math.cos(ph),0))
+
+
+def surface_derivatives(t,phi):
+    e=.0001; tl=max(0,t-e); th=min(1,t+e)
+    dt=(surface(th,phi)-surface(tl,phi))/max(1e-9,th-tl)
+    dp=(surface(t,phi+e)-surface(t,phi-e))/(2*e)
+    return dt,dp
+
+
+def surface_normal(t,phi):
+    dt,dp=surface_derivatives(t,phi)
+    return dp.cross(dt).normalized()
+
+
+def surface_at_angle(t,theta):
+    # Intersect a radial direction with the noncircular rotating section.
+    beta=theta-spiral_phase(t)
+    direction=Vector((math.cos(beta),math.sin(beta)))
+    a=1+BODY_FLUTE; b=1-BODY_FLUTE*.58
+    phi=math.atan2(math.sin(beta)/b,math.cos(beta)/a)
+    for _ in range(10):
+        x=a*math.cos(phi)+.10*math.cos(2*phi); y=b*math.sin(phi)
+        dx=-a*math.sin(phi)-.20*math.sin(2*phi); dy=b*math.cos(phi)
+        value=x*direction.y-y*direction.x
+        derivative=dx*direction.y-dy*direction.x
+        if abs(derivative)>1e-9: phi-=value/derivative
+    return surface(t,phi),surface_normal(t,phi)
 
 
 class SideFit:
@@ -313,76 +379,112 @@ class SideFit:
 def make_horn(builder,fit):
     v=[]; f=[]; uvf=[]; n=RADIAL_SEGMENTS; steps=HORN_SEGMENTS
     for k in range(steps+1):
-        t=k/steps; a,b,_=frame(t)
+        t=k/steps
         for j in range(n):
-            th=2*math.pi*j/n
-            p=center(t)+(a*math.cos(th)+b*math.sin(th))*radius(t,th)
-            v.append(fit.point(p,t))
+            v.append(fit.point(surface_at_angle(t,2*math.pi*j/n)[0],t))
     for k in range(steps):
         for j in range(n):
             f.append((k*n+j,k*n+(j+1)%n,(k+1)*n+(j+1)%n,(k+1)*n+j))
-            patch='gold' if k==0 else 'purple'
+            patch='gold' if k<2 else 'purple'
             uvf.append([uv(patch,j/n,k/steps),uv(patch,(j+1)/n,k/steps),
                         uv(patch,(j+1)/n,(k+1)/steps),uv(patch,j/n,(k+1)/steps)])
-    # Fan caps: closed, no n-gons, no zero-area collapsed ring.
     for k,rev in [(0,True),(steps,False)]:
         idx=len(v); v.append(fit.point(center(k/steps),k/steps))
         for j in range(n):
             face=(idx,k*n+(j+1)%n,k*n+j) if rev else (idx,k*n+j,k*n+(j+1)%n)
             f.append(face)
-            uvf.append([uv('gold' if k==0 else 'purple', .5 if vi==idx else .5+.42*math.cos(2*math.pi*(vi%n)/n), .5 if vi==idx else .5+.42*math.sin(2*math.pi*(vi%n)/n)) for vi in face])
+            patch='gold' if k==0 else 'purple'
+            uvf.append([uv(patch,.5 if vi==idx else .5+.42*math.cos(2*math.pi*(vi%n)/n),
+                          .5 if vi==idx else .5+.42*math.sin(2*math.pi*(vi%n)/n)) for vi in face])
+    start=len(builder.verts)
     builder.part(fit.name+'_Horn',v,f,uvf,True)
+    # Analytic corner normals smooth the sculpted enamel without adding triangles.
+    eps=.0001
+    for k in range(steps+1):
+        t=k/steps; tl=max(0,t-eps); th=min(1,t+eps)
+        for j in range(n):
+            angle=2*math.pi*j/n
+            pt0=fit.point(surface_at_angle(tl,angle)[0],tl)
+            pt1=fit.point(surface_at_angle(th,angle)[0],th)
+            pa0=fit.point(surface_at_angle(t,angle-eps)[0],t)
+            pa1=fit.point(surface_at_angle(t,angle+eps)[0],t)
+            normal=(pa1-pa0).cross(pt1-pt0).normalized()
+            radial=Vector(v[k*n+j])-fit.point(center(t),t)
+            if normal.dot(radial)<0: normal=-normal
+            builder.vertex_normals[start+k*n+j]=normal
 
-
-def ribbon_local(t):
-    th=2*math.pi*SPIRAL_TURNS*t-.6
-    a,b,_=frame(t); normal=a*math.cos(th)+b*math.sin(th)
-    return center(t)+normal*(radius(t,th)+.011),normal
 
 
 def make_ribbon(builder,fit):
     v=[]; f=[]; uvf=[]; steps=RIBBON_SEGMENTS
+    # Six-sided arched foil, fitted over the sculpted purple crest.
+    cross=[(-1,.45),(0,1),(1,.45),(1,0),(0,0),(-1,0)]
+    ids=builder.groups[fit.name+'_Horn']; first=ids[0]; last=ids[-1]
+    polygons=[tuple(i-first for i in face) for face in builder.faces if all(first<=i<=last for i in face)]
+    skin=BVHTree.FromPolygons([Vector(builder.verts[i]) for i in ids],polygons)
     for k in range(steps+1):
-        t=.04+.925*k/steps
-        p,normal=ribbon_local(t)
-        ahead,_=ribbon_local(min(.9999,t+.0001)); behind,_=ribbon_local(max(0,t-.0001))
-        tangent=(ahead-behind).normalized()
-        across=tangent.cross(normal).normalized()
-        width=.097*(.65+.35*(1-t))
-        thickness=.014
-        # Rounded by smooth normals, but closed solid geometry in export.
-        for w,d in [(-1,-1),(1,-1),(1,1),(-1,1)]:
-            q=p+across*(width*.5*w)+normal*(thickness*.5*d)
-            v.append(fit.point(q,t))
+        t=.035+.935*k/steps
+        dt,dp=surface_derivatives(t,0); tangent=dt.normalized()
+        across=dp-tangent*dp.dot(tangent)
+        width=RIBBON_WIDTH*(.47+.53*(1-t)**.50)
+        # Soft, pointed terminations rather than chopped ends.
+        width*=.35+.65*smoothstep(min(k,steps-k)/2.0)
+        halfphi=width/(2*max(.02,across.length))
+        halfphi=min(halfphi,.70)
+        for w,d in cross:
+            phi=w*halfphi
+            tt=t-dp.dot(tangent)/max(1e-5,dt.length)*phi
+            tt=max(.001,min(.997,tt))
+            normal=surface_normal(tt,phi)
+            theory=fit.point(surface(tt,phi),tt)
+            origin=fit.point(center(tt),tt)
+            outward=(theory-origin).normalized()
+            start=origin+outward*max(2.0,(theory-origin).length*4)
+            hit,_,_,_=skin.ray_cast(start,-outward,(start-origin).length*1.1)
+            assert hit is not None, 'Gold ribbon could not reach horn skin'
+            skin_radius=max((hit-origin).length,(theory-origin).length)
+            v.append(origin+outward*(skin_radius+.004+.026*d))
+    # u follows the actual cross-section, including two narrow polished bevels.
+    us=[.02,.50,.98,.92,.50,.08]
     for k in range(steps):
-        for j in range(4):
-            f.append((k*4+j,k*4+(j+1)%4,(k+1)*4+(j+1)%4,(k+1)*4+j))
-            u0,u1=((.02,.98) if j in (0,2) else (.02,.08))
-            uvf.append([uv('gold',u0,k/steps),uv('gold',u1,k/steps),
-                        uv('gold',u1,(k+1)/steps),uv('gold',u0,(k+1)/steps)])
+        for j in range(6):
+            j1=(j+1)%6
+            f.append((k*6+j,k*6+j1,(k+1)*6+j1,(k+1)*6+j))
+            uvf.append([uv('gold',us[j],k/steps),uv('gold',us[j1],k/steps),
+                        uv('gold',us[j1],(k+1)/steps),uv('gold',us[j],(k+1)/steps)])
     for k in (0,steps):
-        a=k*4
-        f.extend([(a,a+1,a+2),(a,a+2,a+3)])
-        uvf.extend([[uv('gold',.1,.1),uv('gold',.9,.1),uv('gold',.9,.9)], [uv('gold',.1,.1),uv('gold',.9,.9),uv('gold',.1,.9)]])
+        a=k*6
+        for j in range(1,5):
+            f.append((a,a+j,a+j+1))
+            uvf.append([uv('gold',.5,.5),uv('gold',.1+.15*j,.2),uv('gold',.1+.15*(j+1),.8)])
     builder.part(fit.name+'_Gold_Helix',v,f,uvf,True)
 
 
-def add_star(builder,name,pos,radius_,depth,rotation=None,scale=(1,1,1),patch='star'):
-    # Five point jewel: ten alternating outline vertices + two raised centers.
+def add_star(builder,name,pos,radius_,depth,rotation=None,scale=(1,1,1),patch='star',beveled=False):
     rot=rotation or Matrix.Identity(3); sc=Vector(scale)
-    local=[]; xy=[]
+    ring=[]; ringuv=[]
     for j in range(10):
-        a=math.pi/2 + j*math.pi/5
-        rr=radius_*(1 if j%2==0 else .445)
-        local.append(Vector((math.cos(a)*rr,0,math.sin(a)*rr)))
-        xy.append((.5+.48*math.cos(a)*(1 if j%2==0 else .445),
-                   .5+.48*math.sin(a)*(1 if j%2==0 else .445)))
-    local.extend([Vector((0,-depth,0)),Vector((0,depth,0))]); xy.extend([(.5,.5),(.5,.5)])
+        a=math.pi/2+j*math.pi/5; rr=1 if j%2==0 else .445
+        ring.append(Vector((math.cos(a)*radius_*rr,0,math.sin(a)*radius_*rr)))
+        ringuv.append((.5+.48*math.cos(a)*rr,.5+.48*math.sin(a)*rr))
+    if beveled:
+        local=list(ring); xy=list(ringuv)
+        for sign in (1,-1):
+            for p,q in zip(ring,ringuv):
+                local.append(Vector((p.x*.82,sign*depth*.64,p.z*.82)))
+                xy.append((.5+(q[0]-.5)*.82,.5+(q[1]-.5)*.82))
+        local.extend([Vector((0,depth,0)),Vector((0,-depth,0))]); xy.extend([(.5,.5)]*2)
+        f=[]
+        for j in range(10):
+            j1=(j+1)%10
+            f.extend([(j,j1,10+j1,10+j),(j,20+j,20+j1,j1),
+                      (30,10+j,10+j1),(31,20+j1,20+j)])
+    else:
+        local=ring+[Vector((0,-depth,0)),Vector((0,depth,0))]; xy=ringuv+[(.5,.5)]*2
+        f=[]
+        for j in range(10): f.extend([(10,j,(j+1)%10),(11,(j+1)%10,j)])
     v=[Vector(pos)+rot@Vector((p.x*sc.x,p.y*sc.y,p.z*sc.z)) for p in local]
-    f=[]; uvf=[]
-    for j in range(10):
-        for face in [(10,j,(j+1)%10),(11,(j+1)%10,j)]:
-            f.append(face); uvf.append([uv(patch,*xy[z]) for z in face])
+    uvf=[[uv(patch,*xy[i]) for i in face] for face in f]
     builder.part(name,v,f,uvf,False)
 
 
@@ -391,7 +493,7 @@ def add_link(builder,name,pos,rotate=0.0,tilt=0.0):
     v=[]; f=[]; uvf=[]; rot=Euler((tilt,0,0),'XYZ').to_matrix() @ Euler((0,0,rotate),'XYZ').to_matrix()
     for i in range(6):
         a=2*math.pi*i/6
-        p=Vector((.025*math.cos(a),0,.050*math.sin(a)))
+        p=Vector((.025*math.cos(a),0,.065*math.sin(a)))
         radial=Vector((math.cos(a),0,math.sin(a))).normalized()
         for j in range(4):
             b=2*math.pi*j/4
@@ -405,25 +507,25 @@ def add_link(builder,name,pos,rotate=0.0,tilt=0.0):
 
 
 def ornaments(builder,fit):
-    # Three raised gold stars per horn; placed on front-facing enamel.
-    for i,(t,th,sz) in enumerate([(.20,-1.66,.045),(.43,-1.25,.052),(.75,-1.55,.036)]):
-        a,b,_=frame(t)
-        p=center(t)+(a*math.cos(th)+b*math.sin(th))*(radius(t,th)+.006)
-        rot=fit.rot @ Euler((0,0,-.15 if fit.sign>0 else .15),'XYZ').to_matrix()
-        add_star(builder,f'{fit.name}_Inlay_{i+1}',fit.point(p,t),sz,.013,rot,patch='gold')
-    # Long outside and short inside chain, no animated/loose Roblox Parts.
-    for ci,(t,th,count,sz) in enumerate([(.60,-.45,5,.088),(.23,-2.0,4,.070)]):
-        a,b,_=frame(t)
-        p=center(t)+(a*math.cos(th)+b*math.sin(th))*(radius(t,th)+.016)
-        anchor=fit.point(p,t)
+    # Sparse jewelry between the broad helical bands.
+    for i,(t,th,sz) in enumerate([(.30,-1.62,.043),(.68,-1.47,.035)]):
+        p,normal=surface_at_angle(t,th)
+        rot=fit.rot @ Euler((0,0,-.10 if fit.sign>0 else .10),'XYZ').to_matrix()
+        add_star(builder,f'{fit.name}_Inlay_{i+1}',fit.point(p+normal*.004,t),sz,.013,rot,patch='gold')
+    for ci,(t,th,count,sz) in enumerate([(.50,-.40,4,.079),(.25,-2.0,3,.061)]):
+        p,normal=surface_at_angle(t,th)
+        anchor=fit.point(p+normal*.004,t)
+        drift=.04 if ci==0 else .15
+        step=.105
+        tilt=math.atan2(drift/(count-1),step)
         for j in range(count):
-            q=anchor+Vector((fit.sign*.005*math.sin(j*.9),(.055 if ci==0 else .11)*j/(count-1),-.071*j))
-            add_link(builder,f'{fit.name}_Chain_{ci+1}_Link_{j+1}',q,math.pi/2*(j%2), math.atan2((.055 if ci==0 else .11)/(count-1),.071))
-        pendant=anchor+Vector((0,.055 if ci==0 else .11,-.071*(count-1)-.05-sz*.70))
+            q=anchor+Vector((0,drift*j/(count-1),-step*j))
+            add_link(builder,f'{fit.name}_Chain_{ci+1}_Link_{j+1}',q,math.pi/2*(j%2),tilt)
+        pendant=anchor+Vector((0,drift,-step*(count-1)-.060-sz*.72))
         add_star(builder,f'{fit.name}_Pendant_{ci+1}',pendant,sz,.027)
     rot=Euler(tuple(math.radians(v) for v in globals()[fit.name+'_STAR_ROTATION']),'XYZ').to_matrix()
-    add_star(builder,fit.name+'_Tip_Star',fit.star_center(),STAR_SCALE,.065,
-             rot,globals()[fit.name+'_STAR_SCALE'])
+    add_star(builder,fit.name+'_Tip_Star',fit.star_center(),STAR_SCALE,.058,
+             rot,globals()[fit.name+'_STAR_SCALE'],beveled=True)
 
 
 def empty(name,pos,col,size=.12,kind='PLAIN_AXES'):
@@ -453,8 +555,8 @@ def stage(col,size,samples):
     sc.render.film_transparent=False
     sc.view_settings.view_transform='AgX'; sc.view_settings.look='AgX - Medium High Contrast'
     sc.world.use_nodes=True
-    sc.world.node_tree.nodes['Background'].inputs[0].default_value=(.11,.085,.16,1)
-    sc.world.node_tree.nodes['Background'].inputs[1].default_value=.55
+    sc.world.node_tree.nodes['Background'].inputs[0].default_value=(.035,.018,.05,1)
+    sc.world.node_tree.nodes['Background'].inputs[1].default_value=.40
     floor=material_simple('Stage_Obsidian',(.015,.011,.025),.25,.32)
     bpy.ops.mesh.primitive_plane_add(size=200,location=(0,0,-.58))
     plane=bpy.context.object; plane.name='STAGE_Not_Exported'; move_to(plane,col); plane.data.materials.append(floor)
@@ -463,7 +565,7 @@ def stage(col,size,samples):
         o=bpy.data.objects.new(name,data); col.objects.link(o); o.location=loc
         o.rotation_euler=(Vector(target)-o.location).to_track_quat('-Z','Y').to_euler()
     light('Key_Softbox',(-3,4,5),450,(1,.86,.66),4)
-    light('Front_Silk',(2,4,2),330,(.73,.79,1),3)
+    light('Front_Silk',(2,4,2),240,(.73,.79,1),3)
     light('Magenta_Rim',(-2,-2,3),420,(.68,.16,1),2)
     light('Gold_Rim',(3,-2,4),500,(1,.64,.23),2)
     light('Top_Strip',(0,.5,5),200,(1,1,1),2)
@@ -541,11 +643,44 @@ def export(obj,out):
         mtl.write_text(body,encoding='utf-8')
 
 
+def make_editable_copy(export_obj,atlas,col):
+    obj=export_obj.copy(); obj.data=export_obj.data.copy()
+    obj.name='Celestial_Horns_EDITABLE'; col.objects.link(obj)
+    obj.data.materials.clear()
+    for name,color in [('Celestial_Amethyst_Enamel',(.28,.025,.50,1)),
+                       ('Celestial_Polished_Gold',(.95,.61,.14,1)),
+                       ('Celestial_Luminous_Stars',(1,.79,.32,1))]:
+        mat=atlas.copy(); mat.name=name; mat.diffuse_color=color
+        obj.data.materials.append(mat)
+    uvdata=obj.data.uv_layers.active.data
+    counts=[0,0,0]
+    for face in obj.data.polygons:
+        u=sum(uvdata[i].uv.x for i in face.loop_indices)/len(face.loop_indices)
+        slot=0 if u<.50 else 1 if u<.76 else 2
+        face.material_index=slot; counts[slot]+=1
+    assert min(counts)>0
+    return obj,{'editable_object':obj.name,'material_slots':3,
+        'face_counts':{m.name:n for m,n in zip(obj.data.materials,counts)},
+        'export_object':export_obj.name,'export_material_slots':1,
+        'same_geometry_as_export':True,'viewport_default':'Material Preview',
+        'all_three_materials_used':True}
+
+
+def configure_viewport():
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            if area.type=='VIEW_3D':
+                space=area.spaces.active
+                space.shading.type='MATERIAL'
+                space.shading.color_type='MATERIAL'
+                if space.region_3d: space.region_3d.view_perspective='CAMERA'
+
+
 def main():
     args=arguments(); apply_config(args.config)
     out=Path(args.output).resolve(); out.mkdir(parents=True,exist_ok=True); (out/'Renders').mkdir(exist_ok=True)
     clean_scene()
-    assetcol=collection('01_EXPORT_Addon'); guides=collection('02_FIT_Guides_NOT_EXPORTED'); pres=collection('03_PRESENTATION_NOT_EXPORTED')
+    editcol=collection('00_EDITABLE_Three_Materials'); assetcol=collection('01_EXPORT_Addon'); guides=collection('02_FIT_Guides_NOT_EXPORTED'); pres=collection('03_PRESENTATION_NOT_EXPORTED')
     ims=make_textures(out); mat=make_material(ims)
     builder=MeshBuilder(); fits=[SideFit('LEFT'),SideFit('RIGHT')]
     for fit in fits:
@@ -583,8 +718,13 @@ def main():
         body=re.sub(r'local geometryCenter = Vector3.new\([^\n]+', 'local geometryCenter = Vector3.new('+', '.join(f'{v:.9f}' for v in manifest['handle_geometry_center_roblox'])+')',body)
         helper.write_text(body,encoding='utf-8')
     (out/'quality_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+    editable,mat_report=make_editable_copy(obj,mat,editcol)
+    (out/'material_report.json').write_text(json.dumps(mat_report,indent=2),encoding='utf-8')
     cam=stage(pres,args.render_size,args.samples)
     export(obj,out)
+    obj.hide_render=True; obj.hide_set(True)
+    guides.hide_viewport=True
+    configure_viewport()
     for image in ims.values():
         image.filepath='//Textures/'+Path(image.filepath).name
         image.pack()
@@ -592,17 +732,18 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=str(out/'Celestial_Horns_Addon.blend'))
     print('CELESTIAL_GEOMETRY_REPORT',json.dumps(report),flush=True)
     if not args.no_render:
-        for name,loc,look,scale in [
-            ('01_Front',(0,7,.65),(0,0,.65),2.9),
-            ('02_Back',(0,-7,.65),(0,0,.65),2.9),
-            ('03_Side',(7,0,.65),(0,0,.65),2.6),
-            ('04_Three_Quarter',(-3.5,6,2.35),(0,0,.65),2.9)]:
+        for key,name,loc,look,scale in [
+            ('front','01_Front',(0,7,.65),(0,0,.65),2.9),
+            ('back','02_Back',(0,-7,.65),(0,0,.65),2.9),
+            ('side','03_Side',(7,0,.65),(0,0,.65),2.6),
+            ('three_quarter','04_Three_Quarter',(-3.5,6,2.35),(0,0,.65),2.9)]:
+            if key not in args.views: continue
             camera_view(cam,loc,look,scale)
             bpy.context.scene.render.filepath=str(out/'Renders'/(name+'.png'))
             bpy.ops.render.render(write_still=True)
             print('CELESTIAL_RENDER_SAVED',name,flush=True)
     camera_view(cam,(-3.5,6,2.35))
-    bpy.ops.object.select_all(action='DESELECT'); obj.select_set(True); bpy.context.view_layer.objects.active=obj
+    bpy.ops.object.select_all(action='DESELECT'); editable.select_set(True); bpy.context.view_layer.objects.active=editable
     bpy.ops.wm.save_as_mainfile(filepath=str(out/'Celestial_Horns_Addon.blend'))
     print('CELESTIAL_COMPLETE',str(out),flush=True)
 

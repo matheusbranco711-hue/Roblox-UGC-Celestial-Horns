@@ -41,7 +41,7 @@ for fit in fits:
                    'base_preservation_error':(base-fit.base).length}
  assert max(errors[fit.name].values())<1e-6,errors
 report=m.mesh_report(obj)
-assert report['triangles']==3800 and report['non_manifold_edges']==0
+assert report['triangles']==3992 and report['non_manifold_edges']==0
 m.clean_scene()
 assert bpy.data.objects.get('REFERENCE_KEEP_ME') is not None
 assert bpy.data.objects.get('Celestial_Horns_Handle') is None

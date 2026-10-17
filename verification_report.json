@@ -3,48 +3,56 @@
   "formats": {
     "blend": {
       "mesh_objects": 1,
-      "triangles": 3800,
+      "triangles": 3992,
       "materials": 1,
       "uv_sets": 1,
       "non_manifold_edges": 0,
       "zero_area_faces": 0,
-      "signed_volume": 0.24864765280646461,
+      "signed_volume": 0.2886853832703996,
       "dimensions_world_blender_units": [
-        2.170912027359009,
-        0.6008372604846954,
-        1.7156569957733154
+        2.4161880016326904,
+        0.7694932222366333,
+        1.659999966621399
       ],
-      "front_mirror_max_error": 0.0
+      "front_mirror_max_error": 0.0,
+      "editable_material_slots": 3,
+      "editable_material_face_counts": {
+        "Celestial_Amethyst_Enamel": 792,
+        "Celestial_Polished_Gold": 1176,
+        "Celestial_Luminous_Stars": 160
+      },
+      "editable_matches_export_geometry": true,
+      "opens_in_material_preview": true
     },
     "fbx": {
       "mesh_objects": 1,
-      "triangles": 3800,
+      "triangles": 3992,
       "materials": 1,
       "uv_sets": 1,
       "non_manifold_edges": 0,
       "zero_area_faces": 0,
-      "signed_volume": 0.24864765280646461,
+      "signed_volume": 0.2886853832703996,
       "dimensions_world_blender_units": [
-        2.170912027359009,
-        0.6008372902870178,
-        1.7156569957733154
+        2.4161880016326904,
+        0.7694931626319885,
+        1.6599999815225601
       ],
-      "roundtrip_vertex_max_error": 2.517124642054114e-07
+      "roundtrip_vertex_max_error": 2.492686519417475e-07
     },
     "obj": {
       "mesh_objects": 1,
-      "triangles": 3800,
+      "triangles": 3992,
       "materials": 1,
       "uv_sets": 1,
       "non_manifold_edges": 0,
       "zero_area_faces": 0,
-      "signed_volume": 0.250498689554063,
+      "signed_volume": 0.2870075191882054,
       "dimensions_world_blender_units": [
-        2.170912027359009,
-        0.600836992263794,
-        1.7156569510698318
+        2.4161880016326904,
+        0.7694929838180542,
+        1.6599999815225601
       ],
-      "roundtrip_vertex_max_error": 8.582267696510826e-07
+      "roundtrip_vertex_max_error": 8.547816605641856e-07
     }
   },
   "roblox_studio_tested": false,

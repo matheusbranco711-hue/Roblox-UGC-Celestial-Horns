@@ -1,6 +1,10 @@
-# Celestial Horns — Roblox UGC Addon
+# Celestial Horns — Revisão 2 / espiral esculpida
 
-Modelo 3D real de **dois chifres de ametista com fitas helicoidais douradas**, duas estrelas de cinco pontas no topo, seis estrelas decorativas e quatro estrelas pendentes em correntes. Não inclui uma segunda faixa nem fogos artificiais novos: foi desenhado para ser equipado junto à tiara original.
+Modelo 3D real de **dois chifres de ametista com fitas helicoidais douradas**, duas estrelas de cinco pontas no topo, quatro estrelas decorativas e quatro estrelas pendentes em correntes. Não inclui uma segunda faixa nem fogos artificiais novos: foi desenhado para ser equipado junto à tiara original.
+
+Nesta revisão, o **próprio corpo roxo tem volume helicoidal**: seções assimétricas em forma de gota giram ao longo de uma curva em S. A base afina em um apoio arredondado, as fitas douradas são mais largas e arqueadas, e as estrelas superiores têm bisel nos dois lados. Os dois centros de alvo das estrelas foram mantidos nas mesmas coordenadas da versão anterior.
+
+O `.blend` abre em **Material Preview** com `Celestial_Horns_EDITABLE` selecionado. Esse objeto usa **três materiais reais, atribuídos às faces**: `Celestial_Amethyst_Enamel`, `Celestial_Polished_Gold` e `Celestial_Luminous_Stars`. A cópia idêntica em `01_EXPORT_Addon` fica oculta e utiliza o atlas único exigido pelo fluxo UGC; é essa cópia que gera o FBX e OBJ principais. Não há duas cópias visíveis sobrepostas.
 
 [Baixar o projeto completo em ZIP](https://github.com/matheusbranco711-hue/Roblox-UGC-Celestial-Horns/archive/refs/heads/codex%2Fcelestial-horns-addon.zip)
 
@@ -22,6 +26,8 @@ Roblox-UGC-Celestial-Horns/
 ├── fit_parameters.json
 ├── fit_manifest.json
 ├── quality_report.json
+├── material_report.json
+├── revision_verification.json
 ├── verification_report.json
 ├── fit_parameter_verification.json
 ├── README.md
@@ -36,7 +42,8 @@ Roblox-UGC-Celestial-Horns/
 │   ├── 01_Front.png
 │   ├── 02_Back.png
 │   ├── 03_Side.png
-│   └── 04_Three_Quarter.png
+│   ├── 04_Three_Quarter.png
+│   └── 05_Before_After.jpg
 ├── Studio/
 │   ├── prepare_import.luau
 │   ├── measure_original_stars.luau
@@ -45,17 +52,18 @@ Roblox-UGC-Celestial-Horns/
     ├── rebuild_from_guides.py
     ├── verify_exports.py
     ├── verify_fit_parameters.py
+    ├── verify_revision.py
     └── prepare_delivery.py
 ```
 
-Ao abrir o `.blend`, ative **Material Preview** para ver as cores e os metais na viewport; **F12** renderiza a câmera de apresentação. As quatro vistas são renders do mesh exportado, sem imagem conceitual substituindo a geometria. A câmera, o chão, as luzes e os guias ficam em coleções próprias e são excluídos do FBX/OBJ. O `.blend` contém as cinco imagens de textura empacotadas, além dos PNGs externos.
+Ao abrir o `.blend`, ative **Material Preview** para ver as cores e os metais na viewport; **F12** renderiza a câmera de apresentação. As quatro vistas renderizam a cópia de edição com a mesma geometria e os mesmos mapas PBR do mesh exportado. `05_Before_After.jpg` compara renders reais das duas versões. A câmera, o chão, as luzes e os guias ficam em coleções próprias e são excluídos do FBX/OBJ. O `.blend` contém as cinco imagens de textura empacotadas, além dos PNGs externos.
 
 ## Geometria e limites conferidos
 
-- **3.800 triângulos**, abaixo do limite oficial de 4.000 para acessórios rígidos.
+- **3.992 triângulos**, abaixo do limite oficial de 4.000 para acessórios rígidos.
 - Uma malha de exportação, um material PBR e um conjunto UV dentro de 0–1.
 - Dois chifres distintos dentro desse mesh, selecionáveis pelos grupos de vértices `LEFT_Horn` e `RIGHT_Horn`; fitas, estrelas e elos também têm grupos próprios.
-- 34 componentes de superfície fechada; todos fazem parte do mesmo objeto rígido. Os elos e ornamentos são geometria estática, sem Parts soltas ou física de correntes.
+- 28 componentes de superfície fechada; todos fazem parte do mesmo objeto rígido. Os elos e ornamentos são geometria estática, sem Parts soltas ou física de correntes.
 - Sem bordas não manifold, vértices soltos ou faces de área zero; normais orientadas para fora.
 - Escala inicial destinada a **Hat / Classic**. O relatório compara os limites centrados no attachment, não só a dimensão total. O preset inicial não cabe no limite de Hat / Normal; redimensione e refaça o encaixe caso queira outra escala de corpo.
 - A origem de autoria corresponde ao `HatAttachment` de referência. A geometria do addon é deslocada acima dessa origem, portanto não centralize a geometria na origem durante a edição.
@@ -82,11 +90,11 @@ Os valores exatos de tamanho e centro geométrico estão em `fit_manifest.json`.
 
 O normal map é deliberadamente neutro: os volumes, as facetas das estrelas e as fitas estão na geometria. As UVs de partes repetidas compartilham regiões do atlas, o que é permitido pela documentação.
 
-A emissão do shader Blender **não é transferida automaticamente**. A documentação atual do Roblox permite máscara emissiva em itens do Marketplace. Atribua `EmissiveMaskContent` pelo seletor de conteúdo em **Properties**, comece com `EmissiveStrength = 1.7` e `EmissiveTint` branco, e confira sob diferentes iluminações. O valor documentado para validação do Marketplace é 0–40. A API declara a escrita do conteúdo da máscara como `PluginSecurity`; não coloque um Script de jogo tentando configurá-la. Se a propriedade não estiver disponível na instalação do Studio, o ColorMap continua fornecendo estrelas douradas claras; atualize o Studio para usar a máscara. Não são necessárias Parts Neon adicionais no acessório UGC.
+A emissão do shader Blender **não é transferida automaticamente**. A documentação atual do Roblox permite máscara emissiva em itens do Marketplace. Atribua `EmissiveMaskContent` pelo seletor de conteúdo em **Properties**, comece com `EmissiveStrength = 1.4` e `EmissiveTint` branco, e confira sob diferentes iluminações. O valor documentado para validação do Marketplace é 0–40. A API declara a escrita do conteúdo da máscara como `PluginSecurity`; não coloque um Script de jogo tentando configurá-la. Se a propriedade não estiver disponível na instalação do Studio, o ColorMap continua fornecendo estrelas douradas claras; atualize o Studio para usar a máscara. Não são necessárias Parts Neon adicionais no acessório UGC.
 
 ## Alinhamento exato com a tiara original
 
-As imagens não determinam profundidade ou coordenadas 3D. Os guias `LEFT_ORIGINAL_STAR_TARGET` e `RIGHT_ORIGINAL_STAR_TARGET` começam em posições estimadas. Uma coincidência com esses guias no Blender não valida a coincidência com o item original.
+As imagens não determinam profundidade ou coordenadas 3D. A coleção `02_FIT_Guides_NOT_EXPORTED` começa oculta na viewport; reative-a no Outliner para mover os guias. Os guias `LEFT_ORIGINAL_STAR_TARGET` e `RIGHT_ORIGINAL_STAR_TARGET` mantêm as posições estimadas da primeira versão. Uma coincidência com esses guias no Blender não valida a coincidência com o item original.
 
 **Fluxo recomendado com medidas do item real:**
 
@@ -106,7 +114,11 @@ Convenções: Blender **Z para cima, +Y para frente**; exportação Roblox **Y p
 | Parâmetro | Controle |
 | --- | --- |
 | `HORN_HEIGHT`, `HORN_SPACING`, `HORN_CURVATURE` | Altura, separação das bases e abertura dos chifres |
-| `SPIRAL_TURNS` | Voltas das fitas e torção sutil do corpo |
+| `SPIRAL_TURNS`, `SPIRAL_PHASE` | Voltas e fase da espiral real do corpo e das fitas |
+| `HORN_SWEEP` | Abertura suave da curva em S, sem deslocar os alvos das pontas |
+| `SPIRAL_SWAY` | Movimento lateral helicoidal do corpo roxo |
+| `BODY_FLUTE` | Assimetria da seção; controla o relevo e a leitura de torção |
+| `RIBBON_WIDTH` | Largura das fitas douradas |
 | `STAR_SCALE` | Raio global das duas estrelas superiores |
 | `HEAD_POSITION_OFFSET` | Deslocamento comum das bases |
 | `LEFT/RIGHT_POSITION_OFFSET` | Deslocamento individual da base |
@@ -141,13 +153,14 @@ Para verificar abertura/reimportação dos arquivos padrão:
 & "C:\Program Files\Blender Foundation\Blender 4.3\blender.exe" --background --python .\Tools\verify_exports.py -- "$PWD"
 ```
 
-A verificação de round-trip incluída compara os arquivos do preset entregue de 3.800 triângulos. Se você alterar a resolução geométrica ou introduzir assimetria intencional, adapte esses dois critérios no verificador. O `quality_report.json` é recalculado pelo gerador para qualquer preset.
+A verificação de round-trip incluída compara os arquivos do preset entregue de 3.992 triângulos, confere os três material slots e a atribuição de cada face no objeto de edição, as normais e a igualdade geométrica entre as cópias de edição e exportação. Se você alterar a resolução geométrica ou introduzir assimetria intencional, adapte esses dois critérios no verificador. O `quality_report.json` é recalculado pelo gerador para qualquer preset.
 
 No Linux, o comando usado para a entrega foi:
 
 ```bash
-blender -b --threads 8 --python create_celestial_horns.py -- --output . --render-size 1200 --samples 128
+blender -b --threads 8 --python create_celestial_horns.py -- --output . --config fit_parameters.json --render-size 1200 --samples 128
 blender -b --python Tools/verify_exports.py -- "$PWD"
+blender -b --python Tools/verify_revision.py -- "$PWD"
 python Tools/prepare_delivery.py
 ```
 

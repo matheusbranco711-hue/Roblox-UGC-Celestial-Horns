@@ -19,13 +19,23 @@ except OSError:
     title=sub=label=ImageFont.load_default()
 w=1600; h=1800
 canvas=Image.new('RGB',(w,h),(15,13,23)); d=ImageDraw.Draw(canvas)
-d.text((64,34),'CELESTIAL HORNS',font=title,fill=(248,222,166))
+d.text((64,34),'CELESTIAL HORNS / V2',font=title,fill=(248,222,166))
 d.text((65,94),'ROBLOX UGC ADDON  /  AMETHYST & GOLD',font=sub,fill=(161,147,181))
 for i,(filename,caption) in enumerate([('01_Front','FRENTE'),('02_Back','TRÁS'),('03_Side','LADO'),('04_Three_Quarter','PERSPECTIVA 3/4')]):
     x=40+(i%2)*780; y=150+(i//2)*790
     im=Image.open(root/'Renders'/(filename+'.png')).convert('RGB').resize((740,740),Image.Resampling.LANCZOS)
     canvas.paste(im,(x,y)); d.rounded_rectangle((x,y,x+740,y+740),radius=6,outline=(99,77,49),width=2)
     d.text((x+20,y+748),caption,font=label,fill=(234,210,161))
-d.text((60,1740),'3.800 triângulos  |  1 malha  |  PBR  |  encaixe com a tiara original pendente no Studio',font=sub,fill=(155,145,169))
+d.text((60,1740),'3.992 triângulos  |  1 malha  |  PBR  |  encaixe com a tiara original pendente no Studio',font=sub,fill=(155,145,169))
 canvas.save(root/'Renders/00_Presentation.jpg',quality=93)
 print('Delivery constants and render sheet refreshed')
+
+# Side-by-side comparison of actual front renders, not conceptual images.
+old=root/'work/revision2/before_front.png'
+if old.exists():
+    comp=Image.new('RGB',(1800,1070),(15,13,23)); cd=ImageDraw.Draw(comp)
+    for x,pth,caption in [(30,old,'VERSÃO ANTERIOR'),(920,root/'Renders/01_Front.png','REVISÃO 2 — ESPIRAL ESCULPIDA')]:
+        im=Image.open(pth).convert('RGB').resize((850,850),Image.Resampling.LANCZOS)
+        comp.paste(im,(x,120)); cd.text((x+15,60),caption,font=label,fill=(240,216,170))
+    cd.text((45,1008),'Comparação das geometrias reais renderizadas no Blender',font=sub,fill=(172,158,185))
+    comp.save(root/'Renders/05_Before_After.jpg',quality=94)

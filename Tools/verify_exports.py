@@ -36,9 +36,10 @@ for ext in ('blend','fbx','obj'):
     report={'mesh_objects':1,'triangles':len(me.loop_triangles),'materials':len(me.materials),
             'uv_sets':len(me.uv_layers),'non_manifold_edges':bad,'zero_area_faces':degenerate,
             'signed_volume':vol,'dimensions_world_blender_units':world_dimensions}
-    assert report['triangles']==3800,(ext,report)
+    assert report['triangles']==3992,(ext,report)
     assert bad==0 and degenerate==0 and vol>0,(ext,report)
     assert len(me.materials)==1 and len(me.uv_layers)==1,(ext,report)
+    assert all(n.vector.length>.99 for n in me.corner_normals)
     assert all(0<=d.uv.x<=1 and 0<=d.uv.y<=1 for d in me.uv_layers.active.data)
     if ext=='blend':
         base_dimensions=world_dimensions
@@ -52,6 +53,24 @@ for ext in ('blend','fbx','obj'):
         report['front_mirror_max_error']=worst
         assert worst<1e-5,report
         assert len([im for im in bpy.data.images if im.packed_file])==5
+        author=bpy.data.objects['Celestial_Horns_EDITABLE']
+        assert not author.hide_render and obj.hide_render
+        assert len(author.data.materials)==3
+        assert len(author.data.vertices)==len(me.vertices)
+        assert max((a.co-b.co).length for a,b in zip(author.data.vertices,me.vertices))<1e-7
+        slots=[0,0,0]
+        uvdata=author.data.uv_layers.active.data
+        for face in author.data.polygons:
+            u=sum(uvdata[i].uv.x for i in face.loop_indices)/len(face.loop_indices)
+            expected=0 if u<.50 else 1 if u<.76 else 2
+            assert face.material_index==expected
+            slots[expected]+=1
+        assert min(slots)>0
+        report['editable_material_slots']=3
+        report['editable_material_face_counts']={m.name:c for m,c in zip(author.data.materials,slots)}
+        report['editable_matches_export_geometry']=True
+        assert any(area.type=='VIEW_3D' and area.spaces.active.shading.type=='MATERIAL' for screen in bpy.data.screens for area in screen.areas)
+        report['opens_in_material_preview']=True
         for side in ('LEFT','RIGHT'):
             group=obj.vertex_groups[side+'_Tip_Star']
             verts=[v.co for v in me.vertices if any(g.group==group.index for g in v.groups)]

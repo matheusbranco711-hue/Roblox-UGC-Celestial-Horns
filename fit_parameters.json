@@ -2,8 +2,8 @@
   "HORN_HEIGHT": 1.48,
   "HORN_SPACING": 1.32,
   "HORN_CURVATURE": 0.24,
-  "SPIRAL_TURNS": 3.2,
-  "STAR_SCALE": 0.195,
+  "SPIRAL_TURNS": 2.65,
+  "STAR_SCALE": 0.18,
   "HEAD_POSITION_OFFSET": [
     0,
     0,
@@ -80,5 +80,11 @@
     0
   ],
   "LEFT_STAR_TARGET": null,
-  "RIGHT_STAR_TARGET": null
+  "RIGHT_STAR_TARGET": null,
+  "SPIRAL_PHASE": -3.55,
+  "HORN_SWEEP": 0.13,
+  "SPIRAL_SWAY": 0.055,
+  "BODY_FLUTE": 0.24,
+  "RIBBON_WIDTH": 0.175,
+  "BASE_RADIUS": 0.29
 }

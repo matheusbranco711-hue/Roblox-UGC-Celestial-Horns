@@ -1,0 +1,15 @@
+{
+  "revision": 2,
+  "passed": true,
+  "max_body_centerline_deviation": 0.17542230802392886,
+  "normalized_front_width_variation_ratio": 1.4422268480633906,
+  "measured_gold_spiral_turns": 2.4807359103062114,
+  "star_center_change_from_v1": {
+    "LEFT": 2.943066701241275e-19,
+    "RIGHT": 2.943066701241275e-19
+  },
+  "star_targets_preserved": true,
+  "three_editable_materials_used": true,
+  "triangles": 3992,
+  "roblox_studio_alignment_validated": false
+}
